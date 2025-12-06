@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Core.Benchmarks/Core.Benchmarks.csproj" />
+  <Project Path="Core.Tests/Core.Tests.csproj" />
+  <Project Path="Core/CLD.HFSM.csproj" />
+</Solution>
