@@ -15,9 +15,10 @@ namespace CLD.HFSM
             OnTransition = onTransition;
         }
 
-        public StateMachineIndex<TState, TTrigger> CreateIndex()
+        public IStateMachineIndex<TState, TTrigger> CreateIndex()
         {
             return new StateMachineIndex<TState, TTrigger>(this);
         }
+
     }
 }

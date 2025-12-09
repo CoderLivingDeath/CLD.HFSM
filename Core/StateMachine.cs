@@ -16,7 +16,7 @@ namespace CLD.HFSM
     public sealed class StateMachine<TState, TTrigger>
     {
         private StateMachineConfiguration<TState, TTrigger> _currentConfiguration;
-        private StateMachineIndex<TState, TTrigger> _index;
+        private IStateMachineIndex<TState, TTrigger> _index;
         private TState _currentStateField;
 
         public TState СurrentState => _currentStateField;

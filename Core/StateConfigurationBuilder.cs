@@ -38,29 +38,42 @@ namespace CLD.HFSM
 
         public StateConfigurationBuilder<TState, TTrigger> OnEnter(StateEnterAction onEnter)
         {
-            _enterHandler = onEnter;
+            _enterHandler += onEnter;
             return this;
         }
 
         public StateConfigurationBuilder<TState, TTrigger> OnExit(StateExitAction onExit)
         {
-            _exitHandler = onExit;
+            _exitHandler += onExit;
             return this;
         }
 
         public StateConfigurationBuilder<TState, TTrigger> OnEnterAsync(StateEnterActionAsync onEnterAsync)
         {
-            _enterAsyncHandler = onEnterAsync;
+            _enterAsyncHandler += onEnterAsync;
             return this;
         }
 
         public StateConfigurationBuilder<TState, TTrigger> OnExitAsync(StateExitActionAsync onExitAsync)
         {
-            _exitAsyncHandler = onExitAsync;
+            _exitAsyncHandler += onExitAsync;
             return this;
         }
 
-        // В StateConfigurationBuilder.GetConfiguration()
+        public StateConfigurationBuilder<TState, TTrigger> AddHandler(IStateHandler handler)
+        {
+            _enterHandler += handler.OnEnter;
+            _exitHandler += handler.OnExit;
+            return this;
+        }
+
+        public StateConfigurationBuilder<TState, TTrigger> AddHandlerAsync(IStateHandlerAsync handler)
+        {
+            _enterAsyncHandler += handler.OnEnter;
+            _exitAsyncHandler += handler.OnExit;
+            return this;
+        }
+
         public StateConfiguration<TState, TTrigger> GetConfiguration()
         {
             var transitions = _transitions.Count > 0

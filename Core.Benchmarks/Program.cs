@@ -10,7 +10,7 @@ namespace StateMachineBenchmarkRunner
     {
         static void Main(string[] args)
         {
-            BenchmarkRunner.Run<StateMachineGenericTypesBenchmarks>();
+            BenchmarkRunner.Run<StateMachineBenchmarks>();
         }
     }
 }

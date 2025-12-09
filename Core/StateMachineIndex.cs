@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace CLD.HFSM
 {
-    public class StateMachineIndex<TState, TTrigger>
+    public class StateMachineIndex<TState, TTrigger> : IStateMachineIndex<TState, TTrigger>
     {
         // Индексация: State -> конфигурация
         private readonly Dictionary<TState, StateConfiguration<TState, TTrigger>> _states;
@@ -190,6 +190,11 @@ namespace CLD.HFSM
                     triggers.Add(trigger);
 
             return triggers;
+        }
+
+        public TState GetStateConfiguration(TState state)
+        {
+            throw new InvalidOperationException();
         }
     }
 }
