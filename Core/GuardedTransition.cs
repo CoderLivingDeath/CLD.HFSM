@@ -21,7 +21,7 @@ namespace CLD.HFSM
             Guard = guard;
         }
 
-        public static implicit operator Transition<TState, TTrigger>(GuardedTransition<TState, TTrigger> guarded) => 
+        public static implicit operator Transition<TState, TTrigger>(GuardedTransition<TState, TTrigger> guarded) =>
             new Transition<TState, TTrigger>(guarded.SourceState, guarded.TargetState, guarded.Trigger, guarded.SourceHandlers, guarded.TargetHandlers);
     }
 }

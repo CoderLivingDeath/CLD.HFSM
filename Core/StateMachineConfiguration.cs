@@ -1,6 +1,4 @@
-﻿using System.Buffers; // для ArrayPool если понадобится
-
-namespace CLD.HFSM
+﻿namespace CLD.HFSM
 {
     public class StateMachineConfiguration<TState, TTrigger>
     {

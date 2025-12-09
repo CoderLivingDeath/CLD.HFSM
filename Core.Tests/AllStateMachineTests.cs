@@ -1,8 +1,4 @@
 using CLD.HFSM;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 [TestClass]
 public class StateMachineTests

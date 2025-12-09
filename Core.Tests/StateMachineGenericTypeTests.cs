@@ -1,6 +1,4 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using CLD.HFSM;
+﻿using CLD.HFSM;
 
 namespace Core.Tests
 {

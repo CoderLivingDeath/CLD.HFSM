@@ -6,21 +6,18 @@ namespace CLD.HFSM
 {
     public class StateMachineIndex<TState, TTrigger> : IStateMachineIndex<TState, TTrigger>
     {
-        // Индексация: State -> конфигурация
         private readonly Dictionary<TState, StateConfiguration<TState, TTrigger>> _states;
 
-        // State -> Trigger -> target (простые переходы) - для IsPermited*
         private readonly Dictionary<TState, Dictionary<TTrigger, TState>> _simpleTransitions;
 
-        // State -> Trigger -> список guards/targets (guarded переходы) - для IsPermited*
         private readonly Dictionary<TState, Dictionary<TTrigger, List<(Func<bool> guard, TState target)>>> _guardedTransitions;
 
-        // Предварительно построенные переходы (0 аллокаций в runtime)
         private readonly Dictionary<TState, Dictionary<TTrigger, Transition<TState, TTrigger>>> _prebuiltSimpleTransitions;
         private readonly Dictionary<TState, Dictionary<TTrigger, GuardedTransition<TState, TTrigger>[]>> _prebuiltGuardedTransitions;
 
         public IReadOnlyDictionary<TState, StateConfiguration<TState, TTrigger>> States => _states;
 
+        //TODO: появляется ошибка если не настроенно состояние
         public StateMachineIndex(StateMachineConfiguration<TState, TTrigger> config)
         {
             _states = new Dictionary<TState, StateConfiguration<TState, TTrigger>>();
@@ -29,7 +26,6 @@ namespace CLD.HFSM
             _prebuiltSimpleTransitions = new Dictionary<TState, Dictionary<TTrigger, Transition<TState, TTrigger>>>();
             _prebuiltGuardedTransitions = new Dictionary<TState, Dictionary<TTrigger, GuardedTransition<TState, TTrigger>[]>>();
 
-            // сначала регистрируем все состояния, чтобы можно было брать таргет‑хендлеры
             foreach (var stateConfig in config.StateConfigurations)
                 _states[stateConfig.State] = stateConfig;
 
@@ -38,7 +34,6 @@ namespace CLD.HFSM
                 var sourceState = stateConfig.State;
                 var sourceHandlers = stateConfig.SyncHandlers;
 
-                // ---------- простые переходы ----------
                 var simpleDict = new Dictionary<TTrigger, TState>();
                 var prebuiltSimpleDict = new Dictionary<TTrigger, Transition<TState, TTrigger>>();
 
