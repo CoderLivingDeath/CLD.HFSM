@@ -1,12 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System.Buffers; // для ArrayPool если понадобится
 
 namespace CLD.HFSM
 {
-    public readonly struct StateMachineConfiguration<TState, TTrigger>
+    public class StateMachineConfiguration<TState, TTrigger>
     {
         public readonly StateConfiguration<TState, TTrigger>[] StateConfigurations;
-
-        // 🔹 Глобальный callback для всех переходов
         public readonly TransitionAction<TState>? OnTransition;
 
         public StateMachineConfiguration(
@@ -15,6 +13,11 @@ namespace CLD.HFSM
         {
             StateConfigurations = stateConfigurations;
             OnTransition = onTransition;
+        }
+
+        public StateMachineIndex<TState, TTrigger> CreateIndex()
+        {
+            return new StateMachineIndex<TState, TTrigger>(this);
         }
     }
 }

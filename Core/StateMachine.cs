@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace CLD.HFSM
@@ -15,72 +16,41 @@ namespace CLD.HFSM
     public sealed class StateMachine<TState, TTrigger>
     {
         private StateMachineConfiguration<TState, TTrigger> _currentConfiguration;
+        private StateMachineIndex<TState, TTrigger> _index;
         private TState _currentStateField;
-
-        private TransitionAction<TState>? _onTransitionCallback;
-
-        // Кэш конфигураций по состоянию
-        private Dictionary<TState, StateConfiguration<TState, TTrigger>>? _stateLookup;
-        private StateConfiguration<TState, TTrigger>? _currentStateConfig;
 
         public TState СurrentState => _currentStateField;
 
         public StateMachine(
-            TState initialState,
-            StateMachineConfiguration<TState, TTrigger> config,
-            bool invokeInitialHandlers = false)
+                TState initialState,
+                StateMachineConfiguration<TState, TTrigger> config,
+                bool invokeInitialHandlers = false)
         {
             Configure(config);
 
-            // Устанавливаем начальное состояние
-            if (_stateLookup != null && _stateLookup.TryGetValue(initialState, out var initialConfig))
-            {
-                _currentStateField = initialState;
-                _currentStateConfig = initialConfig;
-
-                // Опционально вызываем OnEnter для начального состояния
-                if (invokeInitialHandlers)
-                {
-                    initialConfig.SyncHandlers.OnEnter();
-                    initialConfig.AsyncHandlers.OnEnter();
-                }
-            }
-            else
-            {
+            if (!_index.HasTransition(initialState))
                 throw new InvalidOperationException(
                     $"Initial state '{initialState}' is not configured in this state machine");
+
+            _currentStateField = initialState;
+
+            if (invokeInitialHandlers)
+            {
+                if (_index.States.TryGetValue(initialState, out var stateConfig))
+                {
+                    stateConfig.SyncHandlers.OnEnter();
+                }
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Configure(StateMachineConfiguration<TState, TTrigger> config)
         {
             _currentConfiguration = config;
-            _onTransitionCallback = config.OnTransition;
-
-            _stateLookup = new Dictionary<TState, StateConfiguration<TState, TTrigger>>(
-                config.StateConfigurations.Length);
-
-            foreach (var sc in config.StateConfigurations)
-                _stateLookup[sc.State] = sc;
-
-            if (_stateLookup.TryGetValue(_currentStateField, out var currentConfig))
-            {
-                _currentStateConfig = currentConfig;
-            }
-            else if (config.StateConfigurations.Length > 0)
-            {
-                // Если текущее состояние не найдено, берём первое
-                _currentStateField = config.StateConfigurations[0].State;
-                _currentStateConfig = config.StateConfigurations[0];
-            }
-            else
-            {
-                // Конфигурация пустая
-                _currentStateConfig = null;
-            }
+            _index = config.CreateIndex();
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Fire(in TTrigger trigger, bool throwException = true)
         {
             if (TryFire(trigger))
@@ -91,98 +61,75 @@ namespace CLD.HFSM
                     $"No transition found for trigger {trigger} from state {СurrentState}");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryFire(in TTrigger trigger)
         {
-            if (_currentStateConfig is null)
-                return false;
-
-            var stateConfig = _currentStateConfig.Value;
-
-            // 1. Простые переходы
-            if (stateConfig.TryGetTransition(trigger, out var targetState))
+            // Используем TryGetTransitionFor (O(1))
+            if (_index.TryGetTransitionFor(_currentStateField, trigger, out var simpleTrans))
             {
-                ExecuteTransition(new TransitionContext<TState, TTrigger>(
-                    СurrentState, targetState, trigger));
+                ExecuteTransition(simpleTrans);
                 return true;
             }
 
-            // 2. Guarded переходы
-            if (stateConfig.TryGetGuardedTransition(trigger, out targetState))
+            // Используем TryGetGuardedTransitionFor (O(1))
+            if (_index.TryGetGuardedTransitionsFor(_currentStateField, trigger, out var guardedTrans))
             {
-                ExecuteTransition(new TransitionContext<TState, TTrigger>(
-                    СurrentState, targetState, trigger));
-                return true;
+                foreach (var item in guardedTrans)
+                {
+                    if (item.Guard())
+                    {
+                        ExecuteTransition(item);
+
+                        return true;
+                    }
+                }
             }
 
             return false;
         }
 
-        private void ExecuteTransition(in TransitionContext<TState, TTrigger> ctx)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ExecuteTransition(in Transition<TState, TTrigger> transition)
         {
-            if (_currentStateConfig is { } sourceConfig)
-                sourceConfig.SyncHandlers.OnExit();
+            transition.SourceHandlers.OnExit();
 
-            _currentStateField = ctx.TargetState;
+            _currentStateField = transition.TargetState;
 
-            _onTransitionCallback?.Invoke(ctx.SourceState, ctx.TargetState);
+            transition.TargetHandlers.OnEnter();
 
-            if (_stateLookup != null &&
-                _stateLookup.TryGetValue(ctx.TargetState, out var targetConfig))
-            {
-                _currentStateConfig = targetConfig;
-                targetConfig.SyncHandlers.OnEnter();
-            }
-            else
-            {
-                _currentStateConfig = null;
-            }
+            _currentConfiguration.OnTransition?.Invoke(transition.SourceState, transition.TargetState);
+
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ForceTransition(TState targetState, bool validate = false)
         {
-            if (validate && _stateLookup != null && !_stateLookup.ContainsKey(targetState))
-            {
+            if (validate && !_index.HasTransition(targetState))
                 throw new InvalidOperationException(
                     $"State '{targetState}' is not configured in this state machine");
-            }
 
             _currentStateField = targetState;
-
-            if (_stateLookup != null && _stateLookup.TryGetValue(targetState, out var config))
-                _currentStateConfig = config;
-            else
-                _currentStateConfig = null;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ForceTransitionWithHandlers(TState targetState, bool validate = false)
         {
-            if (validate && _stateLookup != null && !_stateLookup.ContainsKey(targetState))
-            {
+            if (validate && !_index.HasTransition(targetState))
                 throw new InvalidOperationException(
                     $"State '{targetState}' is not configured in this state machine");
-            }
-
-            if (_currentStateConfig is { } sourceConfig)
-            {
-                sourceConfig.SyncHandlers.OnExit();
-                sourceConfig.AsyncHandlers.OnExit();
-            }
 
             var previousState = _currentStateField;
+
+            // OnExit предыдущего состояния
+            if (_index.States.TryGetValue(previousState, out var prevConfig))
+                prevConfig.SyncHandlers.OnExit();
+
+            // переход
             _currentStateField = targetState;
 
-            _onTransitionCallback?.Invoke(previousState, targetState);
-
-            if (_stateLookup != null && _stateLookup.TryGetValue(targetState, out var targetConfig))
-            {
-                _currentStateConfig = targetConfig;
+            // OnEnter нового состояния
+            if (_index.States.TryGetValue(targetState, out var targetConfig))
                 targetConfig.SyncHandlers.OnEnter();
-                targetConfig.AsyncHandlers.OnEnter();
-            }
-            else
-            {
-                _currentStateConfig = null;
-            }
         }
     }
 }

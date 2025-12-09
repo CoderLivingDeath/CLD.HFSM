@@ -1,8 +1,7 @@
 ﻿namespace CLD.HFSM
 {
-    public readonly struct StateHandlers
+    public class StateHandlers
     {
-
         public readonly StateEnterAction? Enter;
         public readonly StateExitAction? Exit;
 
