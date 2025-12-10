@@ -2,4 +2,5 @@
   <Project Path="Core.Benchmarks/Core.Benchmarks.csproj" />
   <Project Path="Core.Tests/Core.Tests.csproj" />
   <Project Path="Core/CLD.HFSM.csproj" />
+  <Project Path="Test/Test.csproj" Id="198de3a5-7a75-437d-9d90-902869e9e75f" />
 </Solution>

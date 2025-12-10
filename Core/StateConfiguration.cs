@@ -8,9 +8,11 @@ namespace CLD.HFSM
         public readonly StateHandlers SyncHandlers;
         public readonly StateHandlersAsync AsyncHandlers;
 
-        // 🔹 Публичные массивы для прямого доступа
         public readonly (TTrigger trigger, TState target)[] Transitions;
         public readonly (TTrigger trigger, Func<bool> guard, TState target)[] GuardedTransitions;
+
+        public readonly bool IsSubstate;
+        public readonly TState SuperState;
 
         public StateConfiguration(
             TState state,
@@ -24,6 +26,27 @@ namespace CLD.HFSM
             AsyncHandlers = asyncHandlers;
             Transitions = transitions;
             GuardedTransitions = guardedTransitions;
+
+            IsSubstate = false;
+            SuperState = default;
+        }
+
+        public StateConfiguration(
+            TState state,
+            StateHandlers syncHandlers,
+            StateHandlersAsync asyncHandlers,
+            (TTrigger trigger, TState target)[] transitions,
+            (TTrigger trigger, Func<bool> guard, TState target)[] guardedTransitions,
+            TState superState)
+        {
+            State = state;
+            SyncHandlers = syncHandlers;
+            AsyncHandlers = asyncHandlers;
+            Transitions = transitions;
+            GuardedTransitions = guardedTransitions;
+
+            IsSubstate = true;
+            SuperState = superState;
         }
 
         public int TransitionCount => Transitions.Length;

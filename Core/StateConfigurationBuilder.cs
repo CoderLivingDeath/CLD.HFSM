@@ -13,6 +13,9 @@ namespace CLD.HFSM
         private StateEnterActionAsync? _enterAsyncHandler = null;
         private StateExitActionAsync? _exitAsyncHandler = null;
 
+        private bool IsSubstate = false;
+        private TState SuperState = default;
+
         private readonly List<(TTrigger trigger, TState target)> _transitions;
         private readonly List<(TTrigger trigger, Func<bool> guard, TState target)> _guardedTransitions;
 
@@ -22,6 +25,15 @@ namespace CLD.HFSM
 
             _transitions = new List<(TTrigger trigger, TState target)>(0);
             _guardedTransitions = new List<(TTrigger trigger, Func<bool> guard, TState target)>(0);
+        }
+
+        public StateConfigurationBuilder<TState, TTrigger> SubstateOf(TState state)
+        {
+            if (IsSubstate) throw new InvalidOperationException($"State already substate of {SuperState.ToString()}");
+
+            IsSubstate = true;
+            SuperState = state;
+            return this;
         }
 
         public StateConfigurationBuilder<TState, TTrigger> Permit(TTrigger trigger, TState targetState)
@@ -76,20 +88,32 @@ namespace CLD.HFSM
 
         public StateConfiguration<TState, TTrigger> GetConfiguration()
         {
-            var transitions = _transitions.Count > 0
-                ? _transitions.ToArray()
-                : Array.Empty<(TTrigger, TState)>();
+            if (IsSubstate)
+            {
+                var transitions = _transitions.Count > 0 ? _transitions.ToArray() : Array.Empty<(TTrigger, TState)>();
 
-            var guardedTransitions = _guardedTransitions.Count > 0
-                ? _guardedTransitions.ToArray()
-                : Array.Empty<(TTrigger, Func<bool>, TState)>();
+                var guardedTransitions = _guardedTransitions.Count > 0 ? _guardedTransitions.ToArray() : Array.Empty<(TTrigger, Func<bool>, TState)>();
 
-            return new StateConfiguration<TState, TTrigger>(
-                _state,
-                new StateHandlers(_enterHandler, _exitHandler),
-                new StateHandlersAsync(_enterAsyncHandler, _exitAsyncHandler),
-                transitions,
-                guardedTransitions);
+                return new StateConfiguration<TState, TTrigger>(
+                    _state,
+                    new StateHandlers(_enterHandler, _exitHandler),
+                    new StateHandlersAsync(_enterAsyncHandler, _exitAsyncHandler),
+                    transitions,
+                    guardedTransitions, SuperState);
+            }
+            else
+            {
+                var transitions = _transitions.Count > 0 ? _transitions.ToArray() : Array.Empty<(TTrigger, TState)>();
+
+                var guardedTransitions = _guardedTransitions.Count > 0 ? _guardedTransitions.ToArray() : Array.Empty<(TTrigger, Func<bool>, TState)>();
+
+                return new StateConfiguration<TState, TTrigger>(
+                    _state,
+                    new StateHandlers(_enterHandler, _exitHandler),
+                    new StateHandlersAsync(_enterAsyncHandler, _exitAsyncHandler),
+                    transitions,
+                    guardedTransitions);
+            }
         }
 
     }

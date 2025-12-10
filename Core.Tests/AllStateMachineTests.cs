@@ -53,37 +53,6 @@ public class StateMachineTests
         Assert.AreEqual(GameState.Idle, sm.СurrentState);
     }
 
-    [TestMethod]
-    public void Configure_WithConfiguration_UpdatesStateMachine()
-    {
-        // Создаём начальную конфигурацию с минимальным набором состояний
-        var builder1 = new StateMachineConfigurationBuilder<GameState, GameTrigger>();
-        builder1.ConfigureState(GameState.Idle); // Добавляем Idle в начальную конфигурацию
-        var initialConfig = builder1.GetConfiguration();
-
-        var sm = new StateMachine<GameState, GameTrigger>(GameState.Idle, initialConfig);
-
-        // Создаём новую конфигурацию с переходами
-        var builder2 = new StateMachineConfigurationBuilder<GameState, GameTrigger>();
-        builder2.ConfigureState(GameState.Idle)
-            .Permit(GameTrigger.Start, GameState.Running);
-        builder2.ConfigureState(GameState.Running);
-
-        var newConfig = builder2.GetConfiguration();
-
-        // Реконфигурируем
-        sm.Configure(newConfig);
-
-        // Состояние должно остаться Idle (Configure не меняет текущее состояние)
-        Assert.AreEqual(GameState.Idle, sm.СurrentState);
-
-        // Проверяем, что новая конфигурация работает
-        sm.Fire(GameTrigger.Start, false);
-        Assert.AreEqual(GameState.Running, sm.СurrentState);
-    }
-
-
-
     // ==================== ПРОСТЫЕ ПЕРЕХОДЫ ====================
 
     [TestMethod]

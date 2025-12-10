@@ -186,10 +186,5 @@ namespace CLD.HFSM
 
             return triggers;
         }
-
-        public TState GetStateConfiguration(TState state)
-        {
-            throw new InvalidOperationException();
-        }
     }
 }
