@@ -281,7 +281,6 @@ namespace CLD.HFSM
             StateEnterAction? commonEnter = null;
             StateEnterActionAsync? commonEnterAsync = null;
 
-            // Exit: ВЕСЬ leftBuffer (leaf→root)
             for (int i = 0; i < leftCount; i++)
             {
                 int stateIndex = leftBuffer[i];
@@ -293,7 +292,6 @@ namespace CLD.HFSM
                 }
             }
 
-            // Enter: ВЕСЬ rightBuffer (leaf→root)
             for (int i = 0; i < rightCount; i++)
             {
                 int stateIndex = rightBuffer[i];
