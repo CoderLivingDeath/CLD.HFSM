@@ -184,6 +184,7 @@ namespace CLD.HFSM
             return count;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryFindCommonAncestor(
             int leftCount, Span<int> leftBuffer,
             int rightCount, Span<int> rightBuffer,
