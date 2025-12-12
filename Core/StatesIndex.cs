@@ -143,28 +143,42 @@ namespace CLD.HFSM
         {
             transition = default;
 
-            if (_transitions.TryGetValue((state, trigger), out var transitions))
+            // Собираем ВСЕ переходы по иерархии (state → superstates → root)
+            Span<int> stateBuffer = stackalloc int[32];
+            int hierarchyCount = GetBranchIndexes(state, ref stateBuffer);  // leaf→root
+
+            // Ищем переходы СЛЕВА НАПРАВО (leaf → root)
+            for (int i = 0; i < hierarchyCount; i++)
             {
-                foreach (var item in transitions)
+                int stateIndex = stateBuffer[i];
+                TState currentState = _stateByIndex[stateIndex];
+
+                if (_transitions.TryGetValue((currentState, trigger), out var transitions))
                 {
-                    if (!item.guard()) continue;
-
-                    var targetState = item.state;
-
-                    if (EqualityComparer<TState>.Default.Equals(state, targetState))
+                    foreach (var item in transitions)
                     {
-                        transition = new Transition<TState, TTrigger>(state, targetState, trigger,
-                            BuildSelfTransitionHandlers(state));
+                        if (!item.guard()) continue;
+
+                        var targetState = item.state;
+
+                        if (EqualityComparer<TState>.Default.Equals(currentState, targetState))
+                        {
+                            transition = new Transition<TState, TTrigger>(currentState, targetState, trigger,
+                                BuildSelfTransitionHandlers(currentState));
+                            return true;
+                        }
+
+                        // HFSM переход
+                        var handlers = GetHandlerFromHierarchy(currentState, targetState);
+                        transition = new Transition<TState, TTrigger>(currentState, targetState, trigger, handlers);
                         return true;
                     }
-
-                    var handlers = GetHandlerFromHierarchy(state, targetState);
-                    transition = new Transition<TState, TTrigger>(state, targetState, trigger, handlers);
-                    return true;
                 }
             }
+
             return false;
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetBranchIndexes(in TState state, ref Span<int> buffer)
