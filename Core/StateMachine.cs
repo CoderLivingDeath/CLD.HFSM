@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace CLD.HFSM
 {
-    public delegate void TransitionAction<TState>(TState Source, TState Target);
+    public delegate void TransitionAction<TState>(TState source, TState target);
 
     public delegate void StateEnterAction();
     public delegate void StateExitAction();
@@ -15,33 +14,32 @@ namespace CLD.HFSM
 
     public delegate void ConfiguratioinAction<TState, TTrigger>(StateMachineConfigurationBuilder<TState, TTrigger> build);
 
-    //TODO: добавить поддержку подсостояний
     public sealed class StateMachine<TState, TTrigger>
     {
-        private StateMachineConfiguration<TState, TTrigger> _currentConfiguration;
-        private IStateMachineIndex<TState, TTrigger> _index;
+        private readonly StateMachineConfiguration<TState, TTrigger> _configuration;
+        private readonly StatesIndex<TState, TTrigger> _index;
         private TState _currentStateField;
 
-        public TState СurrentState => _currentStateField;
+        public TState CurrentState => _currentStateField;
 
         public StateMachine(
-                TState initialState,
-                StateMachineConfiguration<TState, TTrigger> sharedConfiguration)
+            TState initialState,
+            StateMachineConfiguration<TState, TTrigger> sharedConfiguration)
         {
-            _currentConfiguration = sharedConfiguration;
-            _index = sharedConfiguration.CreateIndex();
+            _configuration = sharedConfiguration ?? throw new ArgumentNullException(nameof(sharedConfiguration));
+            _index = (StatesIndex<TState, TTrigger>)sharedConfiguration.CreateIndex();
 
-            if (!_index.States.ContainsKey(initialState))
+            // проверяем, что начальное состояние сконфигурировано
+            if (!_index.HasState(initialState))
                 throw new InvalidOperationException(
                     $"Initial state '{initialState}' is not configured in this state machine");
 
             _currentStateField = initialState;
         }
 
-        public bool CanFire()
+        public bool CanFire(TTrigger trigger)
         {
-            // TODO: реализовать проверку возможно ли вызвать триггер
-            throw new InvalidOperationException();
+            return _index.CanFire(_currentStateField, trigger);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -52,31 +50,17 @@ namespace CLD.HFSM
 
             if (throwException)
                 throw new InvalidOperationException(
-                    $"No transition found for trigger {trigger} from state {СurrentState}");
+                    $"No transition found for trigger {trigger} from state {CurrentState}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryFire(in TTrigger trigger)
         {
-            // Используем TryGetTransitionFor (O(1))
-            if (_index.TryGetTransitionFor(_currentStateField, trigger, out var simpleTrans))
+            // Вся логика guarded‑переходов уже внутри StatesIndex.TryGetTransition
+            if (_index.TryGetTransition(_currentStateField, trigger, out var transition))
             {
-                ExecuteTransition(simpleTrans);
+                ExecuteTransition(transition);
                 return true;
-            }
-
-            // Используем TryGetGuardedTransitionFor (O(1))
-            if (_index.TryGetGuardedTransitionsFor(_currentStateField, trigger, out var guardedTrans))
-            {
-                foreach (var item in guardedTrans)
-                {
-                    if (item.Guard())
-                    {
-                        ExecuteTransition(item);
-
-                        return true;
-                    }
-                }
             }
 
             return false;
@@ -85,20 +69,29 @@ namespace CLD.HFSM
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ExecuteTransition(in Transition<TState, TTrigger> transition)
         {
-            transition.SourceHandlers.OnExit();
+            var source = transition.SourceState;
+            var target = transition.TargetState;
+            var handlers = transition.Handlers; // StateHandlers
 
-            _currentStateField = transition.TargetState;
+            // 1. Exit по иерархии
+            handlers.OnExit();
+            handlers.OnExitAsync();
 
-            transition.TargetHandlers.OnEnter();
+            // 2. собственно смена состояния
+            _currentStateField = target;
 
-            _currentConfiguration.OnTransition?.Invoke(transition.SourceState, transition.TargetState);
+            // 3. глобальный колбэк машины, если есть
+            _configuration.OnTransition?.Invoke(source, target);
 
+            // 4. Enter по иерархии
+            handlers.OnEnter();
+            handlers.OnEnterAsync();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ForceTransition(TState targetState, bool validate = false)
         {
-            if (validate && !_index.HasTransition(targetState))
+            if (validate && !_index.HasState(targetState))
                 throw new InvalidOperationException(
                     $"State '{targetState}' is not configured in this state machine");
 
@@ -108,71 +101,23 @@ namespace CLD.HFSM
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ForceTransitionWithHandlers(TState targetState, bool validate = false)
         {
-            if (validate && !_index.HasTransition(targetState))
-                throw new InvalidOperationException(
-                    $"State '{targetState}' is not configured in this state machine");
+            if (validate && !_index.HasState(targetState))
+                throw new InvalidOperationException($"State '{targetState}' is not configured");
 
             var previousState = _currentStateField;
 
-            // OnExit предыдущего состояния
-            if (_index.States.TryGetValue(previousState, out var prevConfig))
-                prevConfig.SyncHandlers.OnExit();
+            // ✅ Индексация: 0 аллокаций List!
+            var handlers = _index.GetHandlerFromHierarchy(previousState, targetState);
 
-            // переход
+            // Exit → Enter атомарно
+            handlers.OnExit();
+            handlers.OnExitAsync();
+
             _currentStateField = targetState;
 
-            // OnEnter нового состояния
-            if (_index.States.TryGetValue(targetState, out var targetConfig))
-                targetConfig.SyncHandlers.OnEnter();
-        }
-    }
-
-    public class InternalStateConfiguration<TState, TTrigger>
-    {
-        public readonly TState State;
-
-        private StateEnterAction? _enterHandler = null;
-        private StateExitAction? _exitHandler = null;
-
-        private StateEnterActionAsync? _enterAsyncHandler = null;
-        private StateExitActionAsync? _exitAsyncHandler = null;
-
-        public InternalStateConfiguration<TState, TTrigger> OnEnter(StateEnterAction onEnter)
-        {
-            _enterHandler += onEnter;
-            return this;
+            handlers.OnEnter();
+            handlers.OnEnterAsync();
         }
 
-        public InternalStateConfiguration<TState, TTrigger> OnExit(StateExitAction onExit)
-        {
-            _exitHandler += onExit;
-            return this;
-        }
-
-        public InternalStateConfiguration<TState, TTrigger> OnEnterAsync(StateEnterActionAsync onEnterAsync)
-        {
-            _enterAsyncHandler += onEnterAsync;
-            return this;
-        }
-
-        public InternalStateConfiguration<TState, TTrigger> OnExitAsync(StateExitActionAsync onExitAsync)
-        {
-            _exitAsyncHandler += onExitAsync;
-            return this;
-        }
-
-        public InternalStateConfiguration<TState, TTrigger> AddHandler(IStateHandler handler)
-        {
-            _enterHandler += handler.OnEnter;
-            _exitHandler += handler.OnExit;
-            return this;
-        }
-
-        public InternalStateConfiguration<TState, TTrigger> AddHandlerAsync(IStateHandlerAsync handler)
-        {
-            _enterAsyncHandler += handler.OnEnter;
-            _exitAsyncHandler += handler.OnExit;
-            return this;
-        }
     }
 }

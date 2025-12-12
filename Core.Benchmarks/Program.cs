@@ -2,11 +2,12 @@
 
 namespace StateMachineBenchmarkRunner
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        //TODO сделать бенчмарк
+        public static void Main(string[] _)
         {
-            BenchmarkRunner.Run<StateMachineBenchmarks>();
         }
     }
+
 }

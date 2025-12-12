@@ -50,7 +50,7 @@ public class StateMachineTests
     public void Constructor_WithConfiguration_InitializesWithFirstState()
     {
         var sm = CreateBasicStateMachine();
-        Assert.AreEqual(GameState.Idle, sm.СurrentState);
+        Assert.AreEqual(GameState.Idle, sm.CurrentState);
     }
 
     // ==================== ПРОСТЫЕ ПЕРЕХОДЫ ====================
@@ -60,7 +60,7 @@ public class StateMachineTests
     {
         var sm = CreateBasicStateMachine();
         sm.Fire(GameTrigger.Start);
-        Assert.AreEqual(GameState.Running, sm.СurrentState);
+        Assert.AreEqual(GameState.Running, sm.CurrentState);
     }
 
     [TestMethod]
@@ -80,7 +80,7 @@ public class StateMachineTests
         sm.Fire(GameTrigger.Pause);
         sm.Fire(GameTrigger.Resume);
         sm.Fire(GameTrigger.Complete);
-        Assert.AreEqual(GameState.GameOver, sm.СurrentState);
+        Assert.AreEqual(GameState.GameOver, sm.CurrentState);
     }
 
     [TestMethod]
@@ -89,7 +89,7 @@ public class StateMachineTests
         var sm = CreateBasicStateMachine();
         var result = sm.TryFire(GameTrigger.Start);
         Assert.IsTrue(result);
-        Assert.AreEqual(GameState.Running, sm.СurrentState);
+        Assert.AreEqual(GameState.Running, sm.CurrentState);
     }
 
     [TestMethod]
@@ -98,7 +98,7 @@ public class StateMachineTests
         var sm = CreateBasicStateMachine();
         var result = sm.TryFire(GameTrigger.Resume);
         Assert.IsFalse(result);
-        Assert.AreEqual(GameState.Idle, sm.СurrentState);
+        Assert.AreEqual(GameState.Idle, sm.CurrentState);
     }
 
     [TestMethod]
@@ -106,9 +106,9 @@ public class StateMachineTests
     {
         var sm = CreateBasicStateMachine();
         sm.Fire(GameTrigger.Start);
-        var initialState = sm.СurrentState;
+        var initialState = sm.CurrentState;
         sm.TryFire(GameTrigger.Start);
-        Assert.AreEqual(initialState, sm.СurrentState);
+        Assert.AreEqual(initialState, sm.CurrentState);
     }
 
     // ==================== ОБРАБОТЧИКИ СОСТОЯНИЙ ====================
@@ -187,7 +187,7 @@ public class StateMachineTests
         var sm = new StateMachine<GameState, GameTrigger>(GameState.Idle, config);
 
         sm.Fire(GameTrigger.Start);
-        Assert.AreEqual(GameState.Running, sm.СurrentState);
+        Assert.AreEqual(GameState.Running, sm.CurrentState);
     }
 
     [TestMethod]
@@ -231,7 +231,7 @@ public class StateMachineTests
 
         var result = sm.TryFire(GameTrigger.Start);
         Assert.IsTrue(result);
-        Assert.AreEqual(GameState.Running, sm.СurrentState);
+        Assert.AreEqual(GameState.Running, sm.CurrentState);
     }
 
     [TestMethod]
@@ -249,7 +249,7 @@ public class StateMachineTests
 
         var result = sm.TryFire(GameTrigger.Start);
         Assert.IsFalse(result);
-        Assert.AreEqual(GameState.Idle, sm.СurrentState);
+        Assert.AreEqual(GameState.Idle, sm.CurrentState);
     }
 
     [TestMethod]
@@ -303,7 +303,7 @@ public class StateMachineTests
         sm.TryFire(GameTrigger.Start);
         Assert.IsTrue(firstGuardCalled);
         Assert.IsTrue(secondGuardCalled);
-        Assert.AreEqual(GameState.Running, sm.СurrentState);
+        Assert.AreEqual(GameState.Running, sm.CurrentState);
     }
 
     [TestMethod]
@@ -339,7 +339,7 @@ public class StateMachineTests
     {
         var sm = CreateBasicStateMachine();
         sm.ForceTransition(GameState.GameOver);
-        Assert.AreEqual(GameState.GameOver, sm.СurrentState);
+        Assert.AreEqual(GameState.GameOver, sm.CurrentState);
     }
 
     [TestMethod]
@@ -347,7 +347,7 @@ public class StateMachineTests
     {
         var sm = CreateBasicStateMachine();
         sm.ForceTransition(GameState.Paused);
-        Assert.AreEqual(GameState.Paused, sm.СurrentState);
+        Assert.AreEqual(GameState.Paused, sm.CurrentState);
     }
 
     [TestMethod]
@@ -387,7 +387,7 @@ public class StateMachineTests
         Assert.IsNotNull(result);
         var config = result.GetConfiguration();
         Assert.AreEqual(GameState.Idle, config.State);
-        Assert.AreEqual(2, config.Transitions.Length);
+        Assert.AreEqual(2, config.GuardedTransitions.Length);
     }
 
     [TestMethod]
@@ -410,7 +410,7 @@ public class StateMachineTests
     {
         var builder = new StateConfigurationBuilder<GameState, GameTrigger>(GameState.Idle);
         var config = builder.GetConfiguration();
-        Assert.AreEqual(0, config.Transitions.Length);
+        Assert.AreEqual(0, config.GuardedTransitions.Length);
     }
 
     [TestMethod]
@@ -424,7 +424,7 @@ public class StateMachineTests
             .Permit(GameTrigger.Complete, GameState.GameOver);
 
         var config = builder.GetConfiguration();
-        Assert.AreEqual(3, config.Transitions.Length);
+        Assert.AreEqual(3, config.GuardedTransitions.Length);
     }
 
     // ==================== TRANSITION CONTEXT ====================
@@ -449,7 +449,7 @@ public class StateMachineTests
     public void StateHandlers_OnEnter_CallsEnterAction()
     {
         var called = false;
-        var handlers = new StateHandlers(() => called = true, null);
+        var handlers = new StateHandlers(enter: () => called = true);
         handlers.OnEnter();
         Assert.IsTrue(called);
     }
@@ -458,7 +458,7 @@ public class StateMachineTests
     public void StateHandlers_OnExit_CallsExitAction()
     {
         var called = false;
-        var handlers = new StateHandlers(null, () => called = true);
+        var handlers = new StateHandlers(exit: () => called = true);
         handlers.OnExit();
         Assert.IsTrue(called);
     }
@@ -515,7 +515,7 @@ public class StateMachineTests
         var sm = new StateMachine<GameState, GameTrigger>(GameState.Idle, config);
 
         sm.Fire(GameTrigger.Start);
-        Assert.AreEqual(GameState.Idle, sm.СurrentState);
+        Assert.AreEqual(GameState.Idle, sm.CurrentState);
         Assert.AreEqual(1, exitCount);
         Assert.AreEqual(1, enterCount);
     }
@@ -545,7 +545,7 @@ public class StateMachineTests
         Assert.IsFalse(sm.TryFire(GameTrigger.Pause));
         Assert.IsTrue(sm.TryFire(GameTrigger.Resume));
         Assert.IsTrue(sm.TryFire(GameTrigger.Complete));
-        Assert.AreEqual(GameState.GameOver, sm.СurrentState);
+        Assert.AreEqual(GameState.GameOver, sm.CurrentState);
     }
 
     [TestMethod]
@@ -597,7 +597,7 @@ public class StateMachineTests
             sm.Fire(GameTrigger.Stop);
         }
 
-        Assert.AreEqual(GameState.Idle, sm.СurrentState);
+        Assert.AreEqual(GameState.Idle, sm.CurrentState);
     }
 
     [TestMethod]
@@ -613,7 +613,7 @@ public class StateMachineTests
         }
 
         Assert.AreEqual(100, count);
-        Assert.AreEqual(GameState.Idle, sm.СurrentState);
+        Assert.AreEqual(GameState.Idle, sm.CurrentState);
     }
 }
 
@@ -684,7 +684,7 @@ public class StateMachineIntegrationTests
         sm.Fire(PlayerInput.Land);
         sm.Fire(PlayerInput.Land);
 
-        Assert.AreEqual(PlayerState.Idle, sm.СurrentState);
+        Assert.AreEqual(PlayerState.Idle, sm.CurrentState);
         Assert.IsTrue(states.Contains("Walking:Enter"));
         Assert.IsTrue(states.Contains("Running:Enter"));
         Assert.IsTrue(states.Contains("Jumping:Enter"));
@@ -713,13 +713,13 @@ public class StateMachineIntegrationTests
         var result = sm.TryFire(PlayerInput.Sprint);
 
         Assert.IsFalse(result);
-        Assert.AreEqual(PlayerState.Walking, sm.СurrentState);
+        Assert.AreEqual(PlayerState.Walking, sm.CurrentState);
 
         stamina = 50;
         result = sm.TryFire(PlayerInput.Sprint);
 
         Assert.IsTrue(result);
-        Assert.AreEqual(PlayerState.Running, sm.СurrentState);
+        Assert.AreEqual(PlayerState.Running, sm.CurrentState);
     }
 }
 
@@ -756,16 +756,16 @@ public class RealWorldScenariosTests
         var sm = new StateMachine<MediaPlayerState, MediaTrigger>(MediaPlayerState.Stopped, config);
 
         sm.Fire(MediaTrigger.Play);
-        Assert.AreEqual(MediaPlayerState.Playing, sm.СurrentState);
+        Assert.AreEqual(MediaPlayerState.Playing, sm.CurrentState);
 
         sm.Fire(MediaTrigger.Pause);
-        Assert.AreEqual(MediaPlayerState.Paused, sm.СurrentState);
+        Assert.AreEqual(MediaPlayerState.Paused, sm.CurrentState);
 
         sm.Fire(MediaTrigger.Play);
-        Assert.AreEqual(MediaPlayerState.Playing, sm.СurrentState);
+        Assert.AreEqual(MediaPlayerState.Playing, sm.CurrentState);
 
         sm.Fire(MediaTrigger.Stop);
-        Assert.AreEqual(MediaPlayerState.Stopped, sm.СurrentState);
+        Assert.AreEqual(MediaPlayerState.Stopped, sm.CurrentState);
     }
 
     // ИНТЕРНЕТ-ЗАКАЗЫ
@@ -795,13 +795,13 @@ public class RealWorldScenariosTests
         var sm = new StateMachine<OrderState, OrderTrigger>(OrderState.Pending, config);
 
         sm.Fire(OrderTrigger.Process);
-        Assert.AreEqual(OrderState.Processing, sm.СurrentState);
+        Assert.AreEqual(OrderState.Processing, sm.CurrentState);
 
         sm.Fire(OrderTrigger.Ship);
-        Assert.AreEqual(OrderState.Shipped, sm.СurrentState);
+        Assert.AreEqual(OrderState.Shipped, sm.CurrentState);
 
         sm.Fire(OrderTrigger.Deliver);
-        Assert.AreEqual(OrderState.Delivered, sm.СurrentState);
+        Assert.AreEqual(OrderState.Delivered, sm.CurrentState);
     }
 
     // TCP СОЕДИНЕНИЕ
@@ -831,13 +831,13 @@ public class RealWorldScenariosTests
         var sm = new StateMachine<ConnectionState, ConnectionTrigger>(ConnectionState.Disconnected, config);
 
         sm.Fire(ConnectionTrigger.Connect);
-        Assert.AreEqual(ConnectionState.Connecting, sm.СurrentState);
+        Assert.AreEqual(ConnectionState.Connecting, sm.CurrentState);
 
         sm.Fire(ConnectionTrigger.Connect);
-        Assert.AreEqual(ConnectionState.Connected, sm.СurrentState);
+        Assert.AreEqual(ConnectionState.Connected, sm.CurrentState);
 
         sm.Fire(ConnectionTrigger.Disconnect);
-        Assert.AreEqual(ConnectionState.Disconnected, sm.СurrentState);
+        Assert.AreEqual(ConnectionState.Disconnected, sm.CurrentState);
     }
 }
 

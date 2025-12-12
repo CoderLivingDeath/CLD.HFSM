@@ -66,9 +66,9 @@ namespace Core.Tests
             var config = builder.GetConfiguration();
             var sm = new StateMachine<EnumState, EnumTrigger>(EnumState.A, config);
 
-            Assert.AreEqual(EnumState.A, sm.СurrentState);
+            Assert.AreEqual(EnumState.A, sm.CurrentState);
             Assert.IsTrue(sm.TryFire(EnumTrigger.Go));
-            Assert.AreEqual(EnumState.B, sm.СurrentState);
+            Assert.AreEqual(EnumState.B, sm.CurrentState);
         }
 
         #endregion
@@ -89,9 +89,9 @@ namespace Core.Tests
             var config = builder.GetConfiguration();
             var sm = new StateMachine<StructState, StructTrigger>(sIdle, config);
 
-            Assert.AreEqual(sIdle, sm.СurrentState);
+            Assert.AreEqual(sIdle, sm.CurrentState);
             Assert.IsTrue(sm.TryFire(tStart));
-            Assert.AreEqual(sRunning, sm.СurrentState);
+            Assert.AreEqual(sRunning, sm.CurrentState);
         }
 
         [TestMethod]
@@ -110,7 +110,7 @@ namespace Core.Tests
             var sm = new StateMachine<StructState, StructTrigger>(sIdle, config);
 
             Assert.IsFalse(sm.TryFire(tPause));
-            Assert.AreEqual(sIdle, sm.СurrentState);
+            Assert.AreEqual(sIdle, sm.CurrentState);
         }
 
         #endregion
@@ -131,9 +131,9 @@ namespace Core.Tests
             var config = builder.GetConfiguration();
             var sm = new StateMachine<ClassState, ClassTrigger>(idle, config);
 
-            Assert.AreSame(idle, sm.СurrentState);
+            Assert.AreSame(idle, sm.CurrentState);
             Assert.IsTrue(sm.TryFire(start));
-            Assert.AreSame(running, sm.СurrentState);
+            Assert.AreSame(running, sm.CurrentState);
         }
 
         [TestMethod]
@@ -158,7 +158,7 @@ namespace Core.Tests
             var sm = new StateMachine<ClassState, ClassTrigger>(idle, config);
 
             Assert.IsTrue(sm.TryFire(start));
-            Assert.AreSame(running, sm.СurrentState);
+            Assert.AreSame(running, sm.CurrentState);
             Assert.IsTrue(idleExitCalled);
             Assert.IsTrue(runningEnterCalled);
         }
@@ -179,7 +179,7 @@ namespace Core.Tests
             var sm = new StateMachine<ClassState, ClassTrigger>(idle, config);
 
             Assert.IsFalse(sm.TryFire(pause));
-            Assert.AreSame(idle, sm.СurrentState);
+            Assert.AreSame(idle, sm.CurrentState);
         }
 
         #endregion

@@ -5,6 +5,7 @@ namespace CLD.HFSM
 {
     public class StateMachineConfigurationBuilder<TState, TTrigger>
     {
+
         private IList<StateConfigurationBuilder<TState, TTrigger>> _stateBuilders;
         private AnyStateConfigurationBuilder<TState, TTrigger>? _anyStateBuilder;
         private TransitionAction<TState>? _onTransition;
@@ -129,7 +130,7 @@ namespace CLD.HFSM
             var guardedTransitions = _guardedTransitions.Count > 0 ? _guardedTransitions.ToArray() : Array.Empty<(TTrigger, Func<bool>, TState)>();
 
             return new AnyStateConfiguration<TState, TTrigger>(
-                new StateHandlers(_enterHandler, _exitHandler),
+                new StateHandlers(_enterHandler, _enterAsyncHandler, _exitHandler, _exitAsyncHandler),
                 new StateHandlersAsync(_enterAsyncHandler, _exitAsyncHandler),
                 transitions,
                 guardedTransitions);

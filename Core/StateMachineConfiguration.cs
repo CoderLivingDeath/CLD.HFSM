@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace CLD.HFSM
+﻿namespace CLD.HFSM
 {
     public class StateMachineConfiguration<TState, TTrigger>
     {
@@ -18,9 +16,9 @@ namespace CLD.HFSM
             OnTransition = onTransition;
         }
 
-        public IStateMachineIndex<TState, TTrigger> CreateIndex()
+        public StatesIndex<TState, TTrigger> CreateIndex()
         {
-            return new StateMachineIndex<TState, TTrigger>(this);
+            return new StatesIndex<TState, TTrigger>(this);
         }
 
     }

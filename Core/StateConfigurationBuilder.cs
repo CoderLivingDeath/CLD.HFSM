@@ -16,14 +16,12 @@ namespace CLD.HFSM
         private bool IsSubstate = false;
         private TState SuperState = default;
 
-        private readonly List<(TTrigger trigger, TState target)> _transitions;
         private readonly List<(TTrigger trigger, Func<bool> guard, TState target)> _guardedTransitions;
 
         public StateConfigurationBuilder(TState state)
         {
             _state = state;
 
-            _transitions = new List<(TTrigger trigger, TState target)>(0);
             _guardedTransitions = new List<(TTrigger trigger, Func<bool> guard, TState target)>(0);
         }
 
@@ -38,7 +36,7 @@ namespace CLD.HFSM
 
         public StateConfigurationBuilder<TState, TTrigger> Permit(TTrigger trigger, TState targetState)
         {
-            _transitions.Add((trigger, targetState));
+            _guardedTransitions.Add((trigger, StateHandlers.EmptyGuard, targetState));
             return this;
         }
 
@@ -90,28 +88,24 @@ namespace CLD.HFSM
         {
             if (IsSubstate)
             {
-                var transitions = _transitions.Count > 0 ? _transitions.ToArray() : Array.Empty<(TTrigger, TState)>();
 
                 var guardedTransitions = _guardedTransitions.Count > 0 ? _guardedTransitions.ToArray() : Array.Empty<(TTrigger, Func<bool>, TState)>();
 
                 return new StateConfiguration<TState, TTrigger>(
                     _state,
-                    new StateHandlers(_enterHandler, _exitHandler),
+                    new StateHandlers(_enterHandler, _enterAsyncHandler, _exitHandler, _exitAsyncHandler),
                     new StateHandlersAsync(_enterAsyncHandler, _exitAsyncHandler),
-                    transitions,
                     guardedTransitions, SuperState);
             }
             else
             {
-                var transitions = _transitions.Count > 0 ? _transitions.ToArray() : Array.Empty<(TTrigger, TState)>();
 
                 var guardedTransitions = _guardedTransitions.Count > 0 ? _guardedTransitions.ToArray() : Array.Empty<(TTrigger, Func<bool>, TState)>();
 
                 return new StateConfiguration<TState, TTrigger>(
                     _state,
-                    new StateHandlers(_enterHandler, _exitHandler),
+                    new StateHandlers(_enterHandler, _enterAsyncHandler, _exitHandler, _exitAsyncHandler),
                     new StateHandlersAsync(_enterAsyncHandler, _exitAsyncHandler),
-                    transitions,
                     guardedTransitions);
             }
         }

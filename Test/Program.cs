@@ -1,118 +1,150 @@
 ﻿using CLD.HFSM;
-using Test;
 
 namespace Test
 {
-    public enum State
-    {
-        None,
-        S1, S2, S3, S4, S5,   // глубинная цепочка
-        Active, Inactive, Idle, Run, Jump
-    }
-
-    public enum Trigger
-    {
-        DoIdle, DoRun, DoJump, Stop, Start
-    }
-
     internal class Program
     {
-        public static StateMachine<State, Trigger> stateMachine;
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            StateMachineConfigurationBuilder<State, Trigger> builder = new();
+            var unit = new DeepUnit();
 
-            builder.OnTransition(LogHelper.LogTransition);
+            Console.WriteLine($"Initial: {unit.Current}");
 
-            // корневые
-            builder.ConfigureState(State.Inactive)
-                .Permit(Trigger.Start, State.Active);
+            await unit.RunScenario();
 
-            builder.ConfigureState(State.Active)
-                .Permit(Trigger.Stop, State.Inactive)
-
-            builder.ConfigureState(State.S1)
-                .SubstateOf(State.Inactive)
-                .Permit(Trigger.DoRun, State.S2);
-
-            builder.ConfigureState(State.S2)
-                .SubstateOf(State.S1)
-                .Permit(Trigger.DoRun, State.S3);
-
-            builder.ConfigureState(State.S3)
-                .SubstateOf(State.S2)
-                .Permit(Trigger.DoRun, State.S4);
-
-            builder.ConfigureState(State.S4)
-                .SubstateOf(State.S3)
-                .Permit(Trigger.DoRun, State.S5);
-
-            builder.ConfigureState(State.S5)
-                .SubstateOf(State.S4)
-                .Permit(Trigger.DoIdle, State.Idle);
-
-            // конечное Idle под Inactive
-            builder.ConfigureState(State.Idle)
-                .SubstateOf(State.Inactive);
-
-            var SharedConfiguration = builder.GetConfiguration();
-
-            // создание state machine
-            stateMachine = new StateMachine<State, Trigger>(State.S1, SharedConfiguration);
-
-            // тестовый сценарий
-            stateMachine.TryFire(Trigger.DoRun);   // S1 -> S2
-            stateMachine.TryFire(Trigger.DoRun);   // S2 -> S3
-            stateMachine.TryFire(Trigger.DoRun);   // S3 -> S4
-            stateMachine.TryFire(Trigger.DoRun);   // S4 -> S5
-            stateMachine.TryFire(Trigger.DoIdle);  // S5 -> Idle (через Inactive как общий родитель)
-        }
-
-        public static void Log(string message)
-        {
-            Console.WriteLine(message);
+            Console.WriteLine("Done. Press any key...");
+            Console.ReadKey();
         }
     }
-}
 
-public static class LogHelper
-{
-    public static int GetDepth(State state)
+    public enum DeepState
     {
-        return state switch
+        Root,
+        A1, A2, A3,
+        B1, B2, B3,
+        Idle,
+        MoveToA3,
+        Attack,
+        MoveToA2
+    }
+
+    public enum DeepTrigger
+    {
+        ToIdle,
+        ToMoveA3,
+        ToAttack,
+        ToMoveA2
+    }
+
+    public class DeepUnit
+    {
+        private readonly StateMachine<DeepState, DeepTrigger> _fsm;
+        private readonly CancellationTokenSource _cts = new();
+
+        public DeepState Current => _fsm.CurrentState;
+
+        public DeepUnit()
         {
-            State.S1 => 1,
-            State.S2 => 2,
-            State.S3 => 3,
-            State.S4 => 4,
-            State.S5 => 5,
+            _fsm = new StateMachine<DeepState, DeepTrigger>(DeepState.Idle, BuildDeepConfig());
+        }
 
-            State.None => 1,      // под Inactive
-            State.Idle => 1,      // под Inactive
-            State.Run => 1,       // под Active
-            State.Jump => 1,      // под Active
-            State.Inactive => 0,
-            State.Active => 0,
-            _ => 0
-        };
-    }
+        private static StateMachineConfiguration<DeepState, DeepTrigger> BuildDeepConfig()
+        {
+            var b = new StateMachineConfigurationBuilder<DeepState, DeepTrigger>();
 
-    public static void LogStateEnter(State state)
-    {
-        var depth = GetDepth(state);
-        var indent = new string(' ', depth * 2);
-        Console.WriteLine($"{indent}[ENTER] {state}");
-    }
+            b.ConfigureState(DeepState.Root)
+                .OnEnter(() => Console.WriteLine("[Root] enter"))
+                .OnExit(() => Console.WriteLine("[Root] exit"));
 
-    public static void LogStateExit(State state)
-    {
-        var depth = GetDepth(state);
-        var indent = new string(' ', depth * 2);
-        Console.WriteLine($"{indent}[EXIT] {state}");
-    }
+            b.ConfigureState(DeepState.A1)
+                .SubstateOf(DeepState.Root)
+                .OnEnter(() => Console.WriteLine("[A1] enter"))
+                .OnExit(() => Console.WriteLine("[A1] exit"));
 
-    public static void LogTransition(State from, State to)
-    {
-        Console.WriteLine($"------ TRANSITION {from} -> {to} ------");
+            b.ConfigureState(DeepState.A2)
+                .SubstateOf(DeepState.A1)
+                .OnEnter(() => Console.WriteLine("[A2] enter"))
+                .OnExit(() => Console.WriteLine("[A2] exit"));
+
+            b.ConfigureState(DeepState.A3)
+                .SubstateOf(DeepState.A2)
+                .OnEnter(() => Console.WriteLine("[A3] enter"))
+                .OnExit(() => Console.WriteLine("[A3] exit"));
+
+            b.ConfigureState(DeepState.B1)
+                .SubstateOf(DeepState.Root)
+                .OnEnter(() => Console.WriteLine("[B1] enter"))
+                .OnExit(() => Console.WriteLine("[B1] exit"));
+
+            b.ConfigureState(DeepState.B2)
+                .SubstateOf(DeepState.B1)
+                .OnEnter(() => Console.WriteLine("[B2] enter"))
+                .OnExit(() => Console.WriteLine("[B2] exit"));
+
+            b.ConfigureState(DeepState.B3)
+                .SubstateOf(DeepState.B2)
+                .OnEnter(() => Console.WriteLine("[B3] enter"))
+                .OnExit(() => Console.WriteLine("[B3] exit"));
+
+            b.ConfigureState(DeepState.Idle)
+                .SubstateOf(DeepState.A3)
+                .Permit(DeepTrigger.ToMoveA3, DeepState.MoveToA3)
+                .Permit(DeepTrigger.ToAttack, DeepState.Attack)
+                .OnEnter(() => Console.WriteLine("[Idle] enter (Root→A1→A2→A3→Idle)"))
+                .OnExit(() => Console.WriteLine("[Idle] exit"));
+
+            b.ConfigureState(DeepState.MoveToA3)
+                .SubstateOf(DeepState.A3)
+                .Permit(DeepTrigger.ToIdle, DeepState.Idle)
+                .OnEnter(() => Console.WriteLine("[MoveToA3] enter (Root→A1→A2→A3→MoveToA3)"))
+                .OnExit(() => Console.WriteLine("[MoveToA3] exit"));
+
+            b.ConfigureState(DeepState.Attack)
+                .SubstateOf(DeepState.B3)
+                .Permit(DeepTrigger.ToIdle, DeepState.Idle)
+                .OnEnter(() => Console.WriteLine("[Attack] enter (Root→B1→B2→B3→Attack)"))
+                .OnExit(() => Console.WriteLine("[Attack] exit"));
+
+            b.ConfigureState(DeepState.MoveToA2)
+                .SubstateOf(DeepState.A2)
+                .Permit(DeepTrigger.ToIdle, DeepState.Idle)
+                .OnEnter(() => Console.WriteLine("[MoveToA2] enter (Root→A1→A2→MoveToA2)"))
+                .OnExit(() => Console.WriteLine("[MoveToA2] exit"));
+
+            return b.GetConfiguration();
+        }
+
+        public async Task RunScenario()
+        {
+            Console.WriteLine($"\n=== INITIAL ENTER CHAIN ===");
+            // При создании FSM должны сработать Root, A1, A2, A3, Idle
+
+            Console.WriteLine($"\n=== SCENARIO 1: Idle → MoveToA3 → Idle ===");
+            _fsm.Fire(DeepTrigger.ToMoveA3);
+            Console.WriteLine($"State after ToMoveA3: {Current}");
+            await Task.Delay(1000, _cts.Token);
+            _fsm.Fire(DeepTrigger.ToIdle);
+            Console.WriteLine($"State after ToIdle: {Current}");
+
+            Console.WriteLine($"\n=== SCENARIO 2: Idle → Attack → Idle ===");
+            _fsm.Fire(DeepTrigger.ToAttack);
+            Console.WriteLine($"State after ToAttack: {Current}");
+            await Task.Delay(1000, _cts.Token);
+            _fsm.Fire(DeepTrigger.ToIdle);
+            Console.WriteLine($"State after ToIdle: {Current}");
+
+            Console.WriteLine($"\n=== SCENARIO 3: Idle → Attack → MoveToA2 → Idle ===");
+            _fsm.Fire(DeepTrigger.ToAttack);
+            Console.WriteLine($"State after ToAttack: {Current}");
+            await Task.Delay(1000, _cts.Token);
+
+            // форс‑переход в другую ветку с другой глубиной
+            _fsm.ForceTransition(DeepState.MoveToA2);
+            Console.WriteLine($"State after Force MoveToA2: {Current}");
+            await Task.Delay(1000, _cts.Token);
+
+            _fsm.Fire(DeepTrigger.ToIdle);
+            Console.WriteLine($"State after ToIdle: {Current}");
+        }
     }
 }
