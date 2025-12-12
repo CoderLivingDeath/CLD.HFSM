@@ -14,6 +14,8 @@ namespace CLD.HFSM
 
     public delegate void ConfiguratioinAction<TState, TTrigger>(StateMachineConfigurationBuilder<TState, TTrigger> build);
 
+    // сделать обработку anystate
+    // сделать наследование переходов детьми от родителей
     public sealed class StateMachine<TState, TTrigger>
     {
         private readonly StateMachineConfiguration<TState, TTrigger> _configuration;

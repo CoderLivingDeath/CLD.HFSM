@@ -30,6 +30,7 @@ namespace Test
 
     public enum DeepTrigger
     {
+        TEST,
         ToIdle,
         ToMoveA3,
         ToAttack,
@@ -88,27 +89,28 @@ namespace Test
 
             b.ConfigureState(DeepState.Idle)
                 .SubstateOf(DeepState.A3)
+                .Permit(DeepTrigger.TEST, DeepState.B1)
                 .Permit(DeepTrigger.ToMoveA3, DeepState.MoveToA3)
                 .Permit(DeepTrigger.ToAttack, DeepState.Attack)
-                .OnEnter(() => Console.WriteLine("[Idle] enter (Root→A1→A2→A3→Idle)"))
-                .OnExit(() => Console.WriteLine("[Idle] exit"));
+                .OnEnter(() => Console.WriteLine("[Idle_A3] enter (Root -> A1 -> A2 -> A3 -> Idle)"))
+                .OnExit(() => Console.WriteLine("[Idle_A3] exit"));
 
             b.ConfigureState(DeepState.MoveToA3)
                 .SubstateOf(DeepState.A3)
                 .Permit(DeepTrigger.ToIdle, DeepState.Idle)
-                .OnEnter(() => Console.WriteLine("[MoveToA3] enter (Root→A1→A2→A3→MoveToA3)"))
+                .OnEnter(() => Console.WriteLine("[MoveToA3] enter (Root -> A1 -> A2 -> A3 -> MoveToA3)"))
                 .OnExit(() => Console.WriteLine("[MoveToA3] exit"));
 
             b.ConfigureState(DeepState.Attack)
                 .SubstateOf(DeepState.B3)
                 .Permit(DeepTrigger.ToIdle, DeepState.Idle)
-                .OnEnter(() => Console.WriteLine("[Attack] enter (Root→B1→B2→B3→Attack)"))
-                .OnExit(() => Console.WriteLine("[Attack] exit"));
+                .OnEnter(() => Console.WriteLine("[Attack_B3] enter (Root -> B1 -> B2 -> B3 -> Attack)"))
+                .OnExit(() => Console.WriteLine("[Attack_B3] exit"));
 
             b.ConfigureState(DeepState.MoveToA2)
                 .SubstateOf(DeepState.A2)
                 .Permit(DeepTrigger.ToIdle, DeepState.Idle)
-                .OnEnter(() => Console.WriteLine("[MoveToA2] enter (Root→A1→A2→MoveToA2)"))
+                .OnEnter(() => Console.WriteLine("[MoveToA2] enter (Root -> A1 -> A2 -> MoveToA2)"))
                 .OnExit(() => Console.WriteLine("[MoveToA2] exit"));
 
             return b.GetConfiguration();
@@ -119,21 +121,21 @@ namespace Test
             Console.WriteLine($"\n=== INITIAL ENTER CHAIN ===");
             // При создании FSM должны сработать Root, A1, A2, A3, Idle
 
-            Console.WriteLine($"\n=== SCENARIO 1: Idle → MoveToA3 → Idle ===");
+            Console.WriteLine($"\n=== SCENARIO 1: Idle -> MoveToA3 -> Idle ===");
             _fsm.Fire(DeepTrigger.ToMoveA3);
             Console.WriteLine($"State after ToMoveA3: {Current}");
             await Task.Delay(1000, _cts.Token);
             _fsm.Fire(DeepTrigger.ToIdle);
             Console.WriteLine($"State after ToIdle: {Current}");
 
-            Console.WriteLine($"\n=== SCENARIO 2: Idle → Attack → Idle ===");
+            Console.WriteLine($"\n=== SCENARIO 2: Idle -> Attack -> Idle ===");
             _fsm.Fire(DeepTrigger.ToAttack);
             Console.WriteLine($"State after ToAttack: {Current}");
             await Task.Delay(1000, _cts.Token);
             _fsm.Fire(DeepTrigger.ToIdle);
             Console.WriteLine($"State after ToIdle: {Current}");
 
-            Console.WriteLine($"\n=== SCENARIO 3: Idle → Attack → MoveToA2 → Idle ===");
+            Console.WriteLine($"\n=== SCENARIO 3: Idle -> Attack -> MoveToA2 -> Idle ===");
             _fsm.Fire(DeepTrigger.ToAttack);
             Console.WriteLine($"State after ToAttack: {Current}");
             await Task.Delay(1000, _cts.Token);
@@ -145,6 +147,11 @@ namespace Test
 
             _fsm.Fire(DeepTrigger.ToIdle);
             Console.WriteLine($"State after ToIdle: {Current}");
+
+
+            _fsm.Fire(DeepTrigger.TEST);
+            Console.WriteLine($"State after ToIdle: {Current}");
+
         }
     }
 }

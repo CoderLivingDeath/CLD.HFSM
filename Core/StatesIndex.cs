@@ -169,7 +169,7 @@ namespace CLD.HFSM
 
         // Возвращает индексы стейтов в порядке от leaf до root
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlySpan<int> GetBranchIndexes(in TState state, ref Span<int> buffer)
+        public int GetBranchIndexes(in TState state, ref Span<int> buffer)
         {
             int count = 0;
             sbyte parentIndex;
@@ -179,12 +179,42 @@ namespace CLD.HFSM
             {
                 buffer[count++] = stateIndex;
                 parentIndex = _superStateIndex[stateIndex];
-                stateIndex = parentIndex; 
+                stateIndex = parentIndex;
             }
             while (parentIndex != -1);
-            buffer[..count].Reverse();
-            return buffer[..count];
+
+            return count;
         }
+
+        public bool TryFindCommonAncestor(
+            int leftCount, Span<int> leftBuffer,
+            int rightCount, Span<int> rightBuffer,
+            out (int leftIndex, int rightIndex, int commonStateIndex) result)
+        {
+            int minLen = Math.Min(leftCount, rightCount);
+            int commonTailLength = 0;
+
+            // Ищем ПОСЛЕДОВАТЕЛЬНЫЙ хвост с конца
+            while (commonTailLength < minLen &&
+                   leftBuffer[leftCount - 1 - commonTailLength] ==
+                   rightBuffer[rightCount - 1 - commonTailLength])
+            {
+                commonTailLength++;
+            }
+
+            if (commonTailLength > 0)
+            {
+                // Возвращаем НАЧАЛО хвоста (последний НЕсовпадающий)
+                int leftLcaIndex = leftCount - commonTailLength;
+                int rightLcaIndex = rightCount - commonTailLength;
+                result = (leftLcaIndex, rightLcaIndex, leftBuffer[leftLcaIndex]);
+                return true;
+            }
+
+            result = default;
+            return false;
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateHandlers GetHandlerFromHierarchy(in TState fromState, in TState toState)
@@ -192,29 +222,36 @@ namespace CLD.HFSM
             Span<int> leftBuffer = stackalloc int[32];
             Span<int> rightBuffer = stackalloc int[32];
 
-            ReadOnlySpan<int> leftBranch = GetBranchIndexes(fromState, ref leftBuffer);
-            ReadOnlySpan<int> rightBranch = GetBranchIndexes(toState, ref rightBuffer);
+            int leftCount = GetBranchIndexes(fromState, ref leftBuffer);
+            int rightCount = GetBranchIndexes(toState, ref rightBuffer);
 
-            int leftCount = leftBranch.Length;
-            int rightCount = rightBranch.Length;
-
-            int minLen = Math.Min(leftCount, rightCount);
-            int divergeIndex = 0;
-
-            while (divergeIndex < minLen &&
-                   leftBranch[divergeIndex] == rightBranch[divergeIndex])
+            // Новый алгоритм LCA
+            if (TryFindCommonAncestor(leftCount, leftBuffer, rightCount, rightBuffer, out var lca))
             {
-                divergeIndex++;
+                return GetHandlersWithCommonAncestor(leftBuffer, leftCount, rightBuffer, rightCount, lca);
             }
+            else
+            {
+                return GetHandlersNoCommonAncestor(leftBuffer, leftCount, rightBuffer, rightCount);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private StateHandlers GetHandlersWithCommonAncestor(
+            Span<int> leftBuffer, int leftCount,
+            Span<int> rightBuffer, int rightCount,
+            (int leftIndex, int rightIndex, int commonStateIndex) lca)
+        {
+            var (leftLcaIndex, rightLcaIndex, _) = lca;
 
             StateExitAction? commonExit = null;
             StateExitActionAsync? commonExitAsync = null;
             StateEnterAction? commonEnter = null;
             StateEnterActionAsync? commonEnterAsync = null;
 
-            for (int i = leftCount - 1; i >= divergeIndex; i--)
+            for (int i = 0; i <= leftLcaIndex - 1; i++)
             {
-                int stateIndex = leftBranch[i];
+                int stateIndex = leftBuffer[i];
                 TState state = _stateByIndex[stateIndex];
                 if (_stateConfigurations.TryGetValue(state, out var cfg))
                 {
@@ -223,9 +260,9 @@ namespace CLD.HFSM
                 }
             }
 
-            for (int i = divergeIndex; i < rightCount; i++)
+            for (int i = 0; i <= rightLcaIndex - 1; i++) 
             {
-                int stateIndex = rightBranch[i];
+                int stateIndex = rightBuffer[i];
                 TState state = _stateByIndex[stateIndex];
                 if (_stateConfigurations.TryGetValue(state, out var cfg))
                 {
@@ -236,25 +273,62 @@ namespace CLD.HFSM
 
             return new StateHandlers(commonEnter, commonEnterAsync, commonExit, commonExitAsync);
         }
-    }
 
-    public readonly struct TransitionHandlers
-    {
-        public readonly StateExitAction? Exit;
-        public readonly StateExitActionAsync? ExitAsync;
-        public readonly StateEnterAction? Enter;
-        public readonly StateEnterActionAsync? EnterAsync;
-
-        public TransitionHandlers(
-            StateExitAction? exit,
-            StateExitActionAsync? exitAsync,
-            StateEnterAction? enter,
-            StateEnterActionAsync? enterAsync)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private StateHandlers GetHandlersNoCommonAncestor(
+            Span<int> leftBuffer, int leftCount,
+            Span<int> rightBuffer, int rightCount)
         {
-            Exit = exit;
-            ExitAsync = exitAsync;
-            Enter = enter;
-            EnterAsync = enterAsync;
+            StateExitAction? commonExit = null;
+            StateExitActionAsync? commonExitAsync = null;
+            StateEnterAction? commonEnter = null;
+            StateEnterActionAsync? commonEnterAsync = null;
+
+            // Exit: ВЕСЬ leftBuffer (leaf→root)
+            for (int i = 0; i < leftCount; i++)
+            {
+                int stateIndex = leftBuffer[i];
+                TState state = _stateByIndex[stateIndex];
+                if (_stateConfigurations.TryGetValue(state, out var cfg))
+                {
+                    commonExit += cfg.SyncHandlers.Exit;
+                    commonExitAsync += cfg.AsyncHandlers.Exit;
+                }
+            }
+
+            // Enter: ВЕСЬ rightBuffer (leaf→root)
+            for (int i = 0; i < rightCount; i++)
+            {
+                int stateIndex = rightBuffer[i];
+                TState state = _stateByIndex[stateIndex];
+                if (_stateConfigurations.TryGetValue(state, out var cfg))
+                {
+                    commonEnter += cfg.SyncHandlers.Enter;
+                    commonEnterAsync += cfg.AsyncHandlers.Enter;
+                }
+            }
+
+            return new StateHandlers(commonEnter, commonEnterAsync, commonExit, commonExitAsync);
+        }
+
+        public readonly struct TransitionHandlers
+        {
+            public readonly StateExitAction? Exit;
+            public readonly StateExitActionAsync? ExitAsync;
+            public readonly StateEnterAction? Enter;
+            public readonly StateEnterActionAsync? EnterAsync;
+
+            public TransitionHandlers(
+                StateExitAction? exit,
+                StateExitActionAsync? exitAsync,
+                StateEnterAction? enter,
+                StateEnterActionAsync? enterAsync)
+            {
+                Exit = exit;
+                ExitAsync = exitAsync;
+                Enter = enter;
+                EnterAsync = enterAsync;
+            }
         }
     }
 }
