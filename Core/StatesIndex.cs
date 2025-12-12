@@ -158,7 +158,6 @@ namespace CLD.HFSM
                         return true;
                     }
 
-                    // Hierarchical transition с индексами!
                     var handlers = GetHandlerFromHierarchy(state, targetState);
                     transition = new Transition<TState, TTrigger>(state, targetState, trigger, handlers);
                     return true;
@@ -167,7 +166,6 @@ namespace CLD.HFSM
             return false;
         }
 
-        // Возвращает индексы стейтов в порядке от leaf до root
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetBranchIndexes(in TState state, ref Span<int> buffer)
         {
@@ -194,7 +192,6 @@ namespace CLD.HFSM
             int minLen = Math.Min(leftCount, rightCount);
             int commonTailLength = 0;
 
-            // Ищем ПОСЛЕДОВАТЕЛЬНЫЙ хвост с конца
             while (commonTailLength < minLen &&
                    leftBuffer[leftCount - 1 - commonTailLength] ==
                    rightBuffer[rightCount - 1 - commonTailLength])
@@ -204,7 +201,6 @@ namespace CLD.HFSM
 
             if (commonTailLength > 0)
             {
-                // Возвращаем НАЧАЛО хвоста (последний НЕсовпадающий)
                 int leftLcaIndex = leftCount - commonTailLength;
                 int rightLcaIndex = rightCount - commonTailLength;
                 result = (leftLcaIndex, rightLcaIndex, leftBuffer[leftLcaIndex]);
