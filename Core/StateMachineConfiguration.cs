@@ -15,10 +15,5 @@
             AnyStateConfiguration = anyStateConfiguration;
             OnTransition = onTransition;
         }
-
-        public StatesIndex<TState, TTrigger> CreateIndex()
-        {
-            return new StatesIndex<TState, TTrigger>(this, true);
-        }
     }
 }

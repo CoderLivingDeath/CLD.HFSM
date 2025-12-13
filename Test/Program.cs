@@ -46,7 +46,7 @@ namespace Test
 
         public DeepUnit()
         {
-            _fsm = new StateMachine<DeepState, DeepTrigger>(DeepState.Idle, BuildDeepConfig());
+            _fsm = new StateMachine<DeepState, DeepTrigger>(DeepState.Idle, BuildDeepConfig(), false);
         }
 
         private static StateMachineConfiguration<DeepState, DeepTrigger> BuildDeepConfig()
@@ -89,7 +89,6 @@ namespace Test
 
             b.ConfigureState(DeepState.Idle)
                 .SubstateOf(DeepState.A3)
-                .Permit(DeepTrigger.TEST, DeepState.B1)
                 .Permit(DeepTrigger.ToMoveA3, DeepState.MoveToA3)
                 .Permit(DeepTrigger.ToAttack, DeepState.Attack)
                 .OnEnter(() => Console.WriteLine("[Idle_A3] enter (Root -> A1 -> A2 -> A3 -> Idle)"))
@@ -113,44 +112,53 @@ namespace Test
                 .OnEnter(() => Console.WriteLine("[MoveToA2] enter (Root -> A1 -> A2 -> MoveToA2)"))
                 .OnExit(() => Console.WriteLine("[MoveToA2] exit"));
 
+            b.ConfigureAnyState()
+                .Permit(DeepTrigger.TEST, DeepState.B3);
+
             return b.GetConfiguration();
         }
 
         public async Task RunScenario()
         {
-            Console.WriteLine($"\n=== INITIAL ENTER CHAIN ===");
-            // При создании FSM должны сработать Root, A1, A2, A3, Idle
-
-            Console.WriteLine($"\n=== SCENARIO 1: Idle -> MoveToA3 -> Idle ===");
-            _fsm.Fire(DeepTrigger.ToMoveA3);
-            Console.WriteLine($"State after ToMoveA3: {Current}");
-            await Task.Delay(1000, _cts.Token);
-            _fsm.Fire(DeepTrigger.ToIdle);
-            Console.WriteLine($"State after ToIdle: {Current}");
-
-            Console.WriteLine($"\n=== SCENARIO 2: Idle -> Attack -> Idle ===");
-            _fsm.Fire(DeepTrigger.ToAttack);
-            Console.WriteLine($"State after ToAttack: {Current}");
-            await Task.Delay(1000, _cts.Token);
-            _fsm.Fire(DeepTrigger.ToIdle);
-            Console.WriteLine($"State after ToIdle: {Current}");
-
-            Console.WriteLine($"\n=== SCENARIO 3: Idle -> Attack -> MoveToA2 -> Idle ===");
-            _fsm.Fire(DeepTrigger.ToAttack);
-            Console.WriteLine($"State after ToAttack: {Current}");
-            await Task.Delay(1000, _cts.Token);
-
-            // форс‑переход в другую ветку с другой глубиной
-            _fsm.ForceTransition(DeepState.MoveToA2);
-            Console.WriteLine($"State after Force MoveToA2: {Current}");
-            await Task.Delay(1000, _cts.Token);
-
-            _fsm.Fire(DeepTrigger.ToIdle);
-            Console.WriteLine($"State after ToIdle: {Current}");
-
-
+            Console.WriteLine(_fsm.CurrentState);
             _fsm.Fire(DeepTrigger.TEST);
-            Console.WriteLine($"State after ToIdle: {Current}");
+            await Task.Delay(1000);
+            Console.WriteLine(_fsm.CurrentState);
+
+
+            //Console.WriteLine($"\n=== INITIAL ENTER CHAIN ===");
+            //// При создании FSM должны сработать Root, A1, A2, A3, Idle
+
+            //Console.WriteLine($"\n=== SCENARIO 1: Idle -> MoveToA3 -> Idle ===");
+            //_fsm.Fire(DeepTrigger.ToMoveA3);
+            //Console.WriteLine($"State after ToMoveA3: {Current}");
+            //await Task.Delay(1000, _cts.Token);
+            //_fsm.Fire(DeepTrigger.ToIdle);
+            //Console.WriteLine($"State after ToIdle: {Current}");
+
+            //Console.WriteLine($"\n=== SCENARIO 2: Idle -> Attack -> Idle ===");
+            //_fsm.Fire(DeepTrigger.ToAttack);
+            //Console.WriteLine($"State after ToAttack: {Current}");
+            //await Task.Delay(1000, _cts.Token);
+            //_fsm.Fire(DeepTrigger.ToIdle);
+            //Console.WriteLine($"State after ToIdle: {Current}");
+
+            //Console.WriteLine($"\n=== SCENARIO 3: Idle -> Attack -> MoveToA2 -> Idle ===");
+            //_fsm.Fire(DeepTrigger.ToAttack);
+            //Console.WriteLine($"State after ToAttack: {Current}");
+            //await Task.Delay(1000, _cts.Token);
+
+            //// форс‑переход в другую ветку с другой глубиной
+            //_fsm.ForceTransition(DeepState.MoveToA2);
+            //Console.WriteLine($"State after Force MoveToA2: {Current}");
+            //await Task.Delay(1000, _cts.Token);
+
+            //_fsm.Fire(DeepTrigger.ToIdle);
+            //Console.WriteLine($"State after ToIdle: {Current}");
+
+
+            //_fsm.Fire(DeepTrigger.TEST);
+            //Console.WriteLine($"State after ToIdle: {Current}");
 
         }
     }

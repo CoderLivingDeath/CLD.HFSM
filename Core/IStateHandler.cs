@@ -6,11 +6,7 @@ namespace CLD.HFSM
     {
         void OnEnter();
         void OnExit();
-    }
-
-    public interface IStateHandlerAsync
-    {
-        ValueTask OnEnter();
-        ValueTask OnExit();
+        ValueTask OnEnterAsync();
+        ValueTask OnExitAsync();
     }
 }

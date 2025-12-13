@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace CLD.HFSM
 {
@@ -25,6 +27,7 @@ namespace CLD.HFSM
             _guardedTransitions = new List<(TTrigger trigger, Func<bool> guard, TState target)>(0);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateConfigurationBuilder<TState, TTrigger> SubstateOf(TState state)
         {
             if (IsSubstate) throw new InvalidOperationException($"State already substate of {SuperState.ToString()}");
@@ -34,53 +37,53 @@ namespace CLD.HFSM
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateConfigurationBuilder<TState, TTrigger> Permit(TTrigger trigger, TState targetState)
         {
             _guardedTransitions.Add((trigger, StateHandlers.EmptyGuard, targetState));
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateConfigurationBuilder<TState, TTrigger> PermitIf(TTrigger trigger, TState targetState, Func<bool> guard)
         {
             _guardedTransitions.Add((trigger, guard, targetState));
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateConfigurationBuilder<TState, TTrigger> OnEnter(StateEnterAction onEnter)
         {
             _enterHandler += onEnter;
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateConfigurationBuilder<TState, TTrigger> OnExit(StateExitAction onExit)
         {
             _exitHandler += onExit;
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateConfigurationBuilder<TState, TTrigger> OnEnterAsync(StateEnterActionAsync onEnterAsync)
         {
             _enterAsyncHandler += onEnterAsync;
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateConfigurationBuilder<TState, TTrigger> OnExitAsync(StateExitActionAsync onExitAsync)
         {
             _exitAsyncHandler += onExitAsync;
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StateConfigurationBuilder<TState, TTrigger> AddHandler(IStateHandler handler)
         {
             _enterHandler += handler.OnEnter;
             _exitHandler += handler.OnExit;
-            return this;
-        }
-
-        public StateConfigurationBuilder<TState, TTrigger> AddHandlerAsync(IStateHandlerAsync handler)
-        {
-            _enterAsyncHandler += handler.OnEnter;
-            _exitAsyncHandler += handler.OnExit;
             return this;
         }
 

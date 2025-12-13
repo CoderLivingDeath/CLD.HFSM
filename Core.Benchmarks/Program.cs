@@ -4,19 +4,22 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using CLD.HFSM;
 
+//[MemoryDiagnoser]
+//[MinColumn, Q1Column, MedianColumn, Q3Column, MaxColumn]
+//[GcForce]
+//[EventPipeProfiler(EventPipeProfile.CpuSampling)]
+//[ThreadingDiagnoser]
+//[SimpleJob(
+//    RuntimeMoniker.Net80,
+//    warmupCount: 100,      // Длинный прогрев для стабильности
+//    iterationCount: 1000,  // Много итераций для точности
+//    launchCount: 5,        // Многократные запуски
+//    invocationCount: 10   // Вызовов на итерацию
+//)]
+//[HardwareCounters]
+
 [MemoryDiagnoser]
-[MinColumn, Q1Column, MedianColumn, Q3Column, MaxColumn]
-[GcForce]
-[EventPipeProfiler(EventPipeProfile.CpuSampling)]
-[ThreadingDiagnoser]
-[SimpleJob(
-    RuntimeMoniker.Net80,
-    warmupCount: 100,      // Длинный прогрев для стабильности
-    iterationCount: 1000,  // Много итераций для точности
-    launchCount: 5,        // Многократные запуски
-    invocationCount: 10   // Вызовов на итерацию
-)]
-[HardwareCounters]
+[SimpleJob(warmupCount:3, launchCount:1, iterationCount:3)]
 
 public class HFSMBenchmarks
 {
