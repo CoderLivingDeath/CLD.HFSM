@@ -18,8 +18,7 @@
 
         public StatesIndex<TState, TTrigger> CreateIndex()
         {
-            return new StatesIndex<TState, TTrigger>(this);
+            return new StatesIndex<TState, TTrigger>(this, true);
         }
-
     }
 }

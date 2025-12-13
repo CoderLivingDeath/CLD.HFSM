@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Core.Benchmarks\Core.Benchmarks.csproj" />
     <ProjectReference Include="..\Core\CLD.HFSM.csproj" />
   </ItemGroup>
 

@@ -24,13 +24,11 @@ namespace CLD.HFSM
 
         public TState CurrentState => _currentStateField;
 
-        public StateMachine(
-            TState initialState,
-            StateMachineConfiguration<TState, TTrigger> sharedConfiguration)
+        public StateMachine(TState initialState,StateMachineConfiguration<TState, TTrigger> sharedConfiguration, bool precomputedTransition = false)
         {
             _configuration = sharedConfiguration ?? throw new ArgumentNullException(nameof(sharedConfiguration));
-            _index = (StatesIndex<TState, TTrigger>)sharedConfiguration.CreateIndex();
-
+            _index = new StatesIndex<TState, TTrigger>(sharedConfiguration, precomputedTransition);
+        
             // проверяем, что начальное состояние сконфигурировано
             if (!_index.HasState(initialState))
                 throw new InvalidOperationException(
